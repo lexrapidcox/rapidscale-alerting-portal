@@ -497,12 +497,11 @@ function loadCustomTemplates() {
     })
     .then(data => {
       customTemplates = data;
-      // Overwrite local storage so the fetched templates stay synced
       localStorage.setItem('ops_custom_templates', JSON.stringify(customTemplates));
       reRenderAllCustomTemplates();
     })
     .catch(error => {
-      console.error("Error loading templates.json:", error);
+      console.error("FAILED TO LOAD TEMPLATES:", error); // <-- Add this to see the exact error
       const saved = localStorage.getItem('ops_custom_templates');
       if (saved) {
         try {
