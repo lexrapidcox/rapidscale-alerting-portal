@@ -490,24 +490,56 @@ function saveNewTemplate(e) {
 }
 
 function loadCustomTemplates() {
+  const fallbackTemplates = [
+    {
+      id: "tpl-cox-edge-down",
+      title: "Cox Edge Down Outage Detected",
+      category: "edge-velo",
+      desc: "Send when an active Cox carrier network outage is confirmed.",
+      body: "Current Status:\nWe have confirmed an ongoing Cox network outage affecting your circuit.\n\nEstimated Time of Restoration (ETR): {{ETR}}\n\nOnce the carrier restores the circuit, this ticket will automatically close."
+    },
+    {
+      id: "tpl-logicmonitor-original",
+      title: "Logicmonitor - Original Template",
+      category: "general",
+      desc: "TO: uet.integration@cox.com",
+      body: "ALL ITEMS IN RED MUST BE FILLED OUT WITH THE CORRECT INFORMATION\nSITE ID & ACCOUNT ID CAN BE FOUND IN THE ALERT SUBJECT"
+    },
+    {
+      id: "tpl-meraki-switch-down",
+      title: "Meraki Switch Down RS Side",
+      category: "meraki",
+      desc: "Meraki Switch Down RS Side",
+      body: "Dear {{Customer_Name}},\n\nThis is Lexter with the RapidScale Alerting team..."
+    },
+    {
+      id: "tpl-meraki-offline-followup",
+      title: "Meraki Switch Offline Follow-Up",
+      category: "meraki",
+      desc": "Send as a follow-up email when a Meraki switch remains offline and unreachable.",
+      body: "Dear {{Customer_Name}},\n\nThis is Lexter following up regarding your Meraki switch..."
+    }
+  ];
+
   fetch('templates.json')
     .then(response => {
       if (!response.ok) throw new Error("HTTP error " + response.status);
       return response.json();
     })
     .then(data => {
-      customTemplates = data;
-      localStorage.setItem('ops_custom_templates', JSON.stringify(customTemplates));
+      if (Array.isArray(data) && data.length > 0) {
+        customTemplates = data;
+        localStorage.setItem('ops_custom_templates', JSON.stringify(customTemplates));
+      } else {
+        customTemplates = fallbackTemplates;
+      }
       reRenderAllCustomTemplates();
     })
     .catch(error => {
-      console.error("FAILED TO LOAD TEMPLATES:", error); // <-- Add this to see the exact error
-      const saved = localStorage.getItem('ops_custom_templates');
-      if (saved) {
-        try {
-          customTemplates = JSON.parse(saved);
-          reRenderAllCustomTemplates();
-        } catch(e) {}
+      console.warn("Could not load templates.json, loading fallback array:", error);
+      customTemplates = fallbackTemplates;
+      reRenderAllCustomTemplates();
+    });
       }
     }
 }
