@@ -473,20 +473,29 @@ function saveNewTemplate(e) {
     const index = customTemplates.findIndex(t => t.id === editId);
     if (index !== -1) {
       customTemplates[index] = { id: editId, title, category, desc, body };
-      localStorage.setItem('ops_custom_templates', JSON.stringify(customTemplates));
-      reRenderAllCustomTemplates();
-      alert("Template updated successfully!");
     }
   } else {
     const templateId = `tpl-custom-${Date.now()}`;
     const newTpl = { id: templateId, title, category, desc, body };
     customTemplates.push(newTpl);
-    localStorage.setItem('ops_custom_templates', JSON.stringify(customTemplates));
-    renderCustomTemplateCard(newTpl);
-    alert("Template created successfully!");
   }
 
+// Save to local storage and re-render the grid immediately
+  localStorage.setItem('ops_custom_templates', JSON.stringify(customTemplates));
+  reRenderAllCustomTemplates();
   closeNewTemplateModal();
+
+  // Automatically copy the updated JSON array to clipboard for GitHub
+  const updatedJsonString = JSON.stringify(customTemplates, null, 2);
+  navigator.clipboard.writeText(updatedJsonString).then(() => {
+    alert("Template saved! The updated JSON has been automatically copied to your clipboard. Just paste it into your `templates.json` file on GitHub to sync with your team!");
+  }).catch(err => {
+    console.error("Clipboard copy failed:", err);
+    alert("Template saved, but automatic clipboard copy failed. Check console.");
+  });
+}
+
+function loadCustomTemplates() {
 }
 
 function loadCustomTemplates() {
