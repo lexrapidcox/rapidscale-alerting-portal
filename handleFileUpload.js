@@ -491,22 +491,26 @@ function saveNewTemplate(e) {
 
 function loadCustomTemplates() {
   fetch('templates.json')
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) throw new Error("HTTP error " + response.status);
+      return response.json();
+    })
     .then(data => {
       customTemplates = data;
+      // Overwrite local storage so the fetched templates stay synced
+      localStorage.setItem('ops_custom_templates', JSON.stringify(customTemplates));
       reRenderAllCustomTemplates();
     })
     .catch(error => {
       console.error("Error loading templates.json:", error);
-      // Fallback to localStorage if fetch fails
       const saved = localStorage.getItem('ops_custom_templates');
       if (saved) {
         try {
           customTemplates = JSON.parse(saved);
           reRenderAllCustomTemplates();
         } catch(e) {}
-    }
-  }
+      }
+    });
 }
 
 function reRenderAllCustomTemplates() {
