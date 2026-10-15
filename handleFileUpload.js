@@ -510,7 +510,7 @@ function loadCustomTemplates() {
           reRenderAllCustomTemplates();
         } catch(e) {}
       }
-    });
+    }
 }
 
 function reRenderAllCustomTemplates() {
