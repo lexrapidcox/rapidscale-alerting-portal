@@ -1,0 +1,33 @@
+/* Location Cell Status Colors */
+.loc-cell {
+  font-weight: bold;
+  text-align: center;
+  width: 50px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.status-dsr {
+  background-color: #f59e0b !important;
+  color: #ffffff !important;
+}
+
+.status-green {
+  background-color: #8cb851 !important;
+  color: #ffffff !important;
+}
+
+.status-cox {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+}
+
+.status-att {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+}
+
+.loc-cell:hover {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+}
