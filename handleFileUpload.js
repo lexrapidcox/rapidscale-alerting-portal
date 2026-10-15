@@ -490,13 +490,21 @@ function saveNewTemplate(e) {
 }
 
 function loadCustomTemplates() {
-  const saved = localStorage.getItem('ops_custom_templates');
-  if (saved) {
-    try {
-      customTemplates = JSON.parse(saved);
-      customTemplates.forEach(tpl => renderCustomTemplateCard(tpl));
-    } catch(e) {
-      console.error("Error loading custom templates", e);
+  fetch('templates.json')
+    .then(response => response.json())
+    .then(data => {
+      customTemplates = data;
+      reRenderAllCustomTemplates();
+    })
+    .catch(error => {
+      console.error("Error loading templates.json:", error);
+      // Fallback to localStorage if fetch fails
+      const saved = localStorage.getItem('ops_custom_templates');
+      if (saved) {
+        try {
+          customTemplates = JSON.parse(saved);
+          reRenderAllCustomTemplates();
+        } catch(e) {}
     }
   }
 }
