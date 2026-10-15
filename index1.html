@@ -1,0 +1,1937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RapidScale Network Support - Operations Portal</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <!-- OTP Library for Authenticator 6-digit code generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/otpauth/9.1.4/otpauth.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    code, pre, .font-mono { font-family: 'JetBrains Mono', monospace; }
+    
+    .loc-cell {
+      font-weight: bold;
+      text-align: center;
+      width: 50px;
+      cursor: pointer;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+    .status-dsr { background-color: #f59e0b !important; color: #ffffff !important; }
+    .status-green { background-color: #8cb851 !important; color: #ffffff !important; }
+    .status-cox { background-color: #0284c7 !important; color: #ffffff !important; }
+    .status-att { background-color: #ffffff !important; color: #111827 !important; }
+    .loc-cell:hover { outline: 2px solid #3b82f6; outline-offset: -2px; }
+
+    /* Custom scrollbar for sidebars */
+    .sidebar-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+    .sidebar-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col relative overflow-x-hidden">
+
+  <!-- Hidden Static Template Store for Edge Velo Multiple Link Down -->
+  <div id="tpl-edge-velo-multi-link-down" class="hidden">
+Dear {{Client_Name}},
+
+Our Network Support team has detected multiple links down affecting your edge VeloCloud deployment.
+
+The following site locations and case numbers are currently affected:
+{{Dynamic_Location_List}}
+
+Carrier / Circuit Port Details: {{Circuit_Type}}
+Estimated Time of Restoration (ETR): {{ETR}}
+
+Our engineering team is actively investigating with local carriers to resolve these outages. We will provide updates as new information becomes available.
+
+Best regards,
+RapidScale Network Support Team
+  </div>
+
+  <!-- Auto Toast Notification -->
+  <div id="toastNotification" class="fixed top-5 right-5 bg-emerald-600 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 transform translate-y-[-100px] opacity-0 transition-all duration-300 z-50 pointer-events-none">
+    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+    <span id="toastMessage">Copied to clipboard!</span>
+  </div>
+
+  <header class="bg-slate-900 text-white shadow-md sticky top-0 z-40 w-full">
+    <div class="w-full px-4">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center space-x-3">
+          <div class="bg-blue-600 p-2 rounded-lg font-bold text-white text-lg">RS</div>
+          <div>
+            <h1 class="text-base font-bold leading-tight">Network Support Portal</h1>
+            <p class="text-[11px] text-slate-400">RapidScale Operations Hub</p>
+          </div>
+        </div>
+
+        <nav class="flex space-x-1 sm:space-x-2">
+          <button type="button" onclick="switchTab('directory')" id="btn-directory" class="px-3 py-2 rounded-md text-xs sm:text-sm font-semibold transition bg-slate-800 text-blue-400 cursor-pointer">
+            Client Directory
+          </button>
+          <button type="button" onclick="switchTab('special')" id="btn-special" class="px-3 py-2 rounded-md text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer">
+            Special Customers Hub
+          </button>
+          <button type="button" onclick="switchTab('templates')" id="btn-templates" class="px-3 py-2 rounded-md text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer">
+            Email Templates
+          </button>
+          <button type="button" onclick="switchTab('runbooks')" id="btn-runbooks" class="px-3 py-2 rounded-md text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer">
+            Runbooks & SOPs
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Full-Width Container -->
+  <div class="flex-grow w-full py-4 flex flex-col lg:flex-row gap-4 px-2">
+
+    <!-- LEFT SIDEBAR: Quick Notes -->
+    <aside class="w-full lg:w-72 flex-shrink-0 space-y-4">
+      <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 sticky top-20">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="text-base">📌</span>
+            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Quick Side Notes</h3>
+          </div>
+          <button type="button" onclick="openQuickNoteModal()" class="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">+ New Note</button>
+        </div>
+        <p class="text-[11px] text-slate-500 mb-2.5">Click any note to quickly copy pre-written text for recurring tickets.</p>
+
+        <!-- Quick Notes Container -->
+        <div id="quickNotesList" class="space-y-2.5 max-h-[calc(100vh-220px)] overflow-y-auto pr-1 sidebar-scroll">
+          <!-- Dynamic Quick Notes render here -->
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA (CENTER) -->
+    <main class="flex-grow min-w-0">
+
+      <!-- Client Directory Tab -->
+      <section id="tab-directory" class="space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-3">
+          <div>
+            <h2 class="text-xl font-bold text-slate-800">Client Directory</h2>
+            <p class="text-xs text-slate-500">Quickly search client accounts and circuit references.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <input type="text" id="dirSearch" onkeyup="filterDirectory('dirSearch', 'directoryTable')" placeholder="Search clients or devices..." class="px-3 py-1.5 border border-slate-300 rounded-lg text-xs w-full sm:w-64 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            
+            <button type="button" onclick="openClientModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer select-none">
+              + Add Client
+            </button>
+
+            <label for="excelDirInput" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer inline-flex items-center justify-center select-none">
+              Import Excel
+              <input type="file" id="excelDirInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleFileUploadDirectory(event)">
+            </label>
+
+            <button type="button" onclick="clearImportedData('ops_directory_data', 'directoryTable')" class="bg-rose-100 text-rose-700 hover:bg-rose-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer select-none">
+              Clear Data
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow border border-slate-200 overflow-x-auto">
+          <table id="directoryTable" class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-800 text-white uppercase text-[10px] tracking-wider">
+                <th class="p-3">Account ID</th>
+                <th class="p-3">Client Name</th>
+                <th class="p-3">Primary Contact</th>
+                <th class="p-3">Phone</th>
+                <th class="p-3">Email</th>
+                <th class="p-3">Notes</th>
+                <th class="p-3 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 text-slate-700 font-medium"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Special Customers Hub Tab -->
+      <section id="tab-special" class="space-y-4 hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-3">
+          <div>
+            <h2 class="text-xl font-bold text-slate-800">Special Customers Hub</h2>
+            <p class="text-xs text-slate-500">Dedicated operational procedures and escalations for high-priority accounts.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="text" id="specialSearch" onkeyup="filterDirectory('specialSearch', 'specialTable')" placeholder="Search special locations..." class="px-3 py-1.5 border border-slate-300 rounded-lg text-xs w-full sm:w-64 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            
+            <label for="excelSpecialInput" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer inline-flex items-center justify-center select-none">
+              Import Excel
+              <input type="file" id="excelSpecialInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleFileUploadSpecial(event)">
+            </label>
+            
+            <button type="button" onclick="clearImportedData('ops_special_data', 'specialTable')" class="bg-rose-100 text-rose-700 hover:bg-rose-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer select-none">
+              Clear Data
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-lg shadow border border-slate-200 space-y-2">
+          <h3 class="text-base font-bold text-slate-800">Blue Beacon Custom Outage Standard Operating Procedure</h3>
+          <p class="text-xs text-slate-600 leading-relaxed">For Blue Beacon FortiGate primary link failures, verify cellular failover status in FortiManager prior to dispatching customer notices. Click the <strong>Loc #</strong> cell to toggle status highlight color mode.</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow border border-slate-200 overflow-x-auto">
+          <table id="specialTable" class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-800 text-white uppercase text-[10px] tracking-wider">
+                <th class="p-3 text-center">Loc #</th>
+                <th class="p-3">Location Name</th>
+                <th class="p-3">Address</th>
+                <th class="p-3">Contact (GM)</th>
+                <th class="p-3">Contact (OM)</th>
+                <th class="p-3">Phone</th>
+                <th class="p-3">Mobile</th>
+                <th class="p-3">Conn Type</th>
+                <th class="p-3">Carrier</th>
+                <th class="p-3">Speed</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 text-slate-700 font-medium"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Email Templates Tab -->
+      <section id="tab-templates" class="space-y-4 hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-3">
+          <div>
+            <h2 class="text-xl font-bold text-slate-800">Email Templates</h2>
+            <p class="text-xs text-slate-500">Filter templates by vendor platform or service queue.</p>
+          </div>
+          
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" onclick="openNewTemplateModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer select-none">
+              + Create Template
+            </button>
+
+            <button type="button" onclick="filterTemplates('all')" id="tpl-btn-all" class="tpl-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-blue-600 text-white cursor-pointer">All Templates</button>
+            <button type="button" onclick="filterTemplates('edge-velo')" id="tpl-btn-edge-velo" class="tpl-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-200 text-slate-700 hover:bg-slate-300 cursor-pointer">Edge Velo</button>
+            <button type="button" onclick="filterTemplates('fortigate')" id="tpl-btn-fortigate" class="tpl-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-200 text-slate-700 hover:bg-slate-300 cursor-pointer">FortiGate</button>
+            <button type="button" onclick="filterTemplates('general')" id="tpl-btn-general" class="tpl-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-200 text-slate-700 hover:bg-slate-300 cursor-pointer">General</button>
+            <button type="button" onclick="filterTemplates('meraki')" id="tpl-btn-meraki" class="tpl-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-200 text-slate-700 hover:bg-slate-300 cursor-pointer">Meraki</button>
+            <button type="button" onclick="filterTemplates('custom')" id="tpl-btn-custom" class="tpl-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-200 text-slate-700 hover:bg-slate-300 cursor-pointer">Service Restored</button>
+          </div>
+        </div>
+        
+        <div id="templatesGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Templates render here -->
+        </div>
+      </section>
+
+      <!-- Runbooks Tab -->
+      <section id="tab-runbooks" class="space-y-4 hidden">
+        <div class="border-b border-slate-200 pb-3">
+          <h2 class="text-xl font-bold text-slate-800">Runbooks & Standard Operating Procedures</h2>
+          <p class="text-xs text-slate-500">Official Confluence documentation links and step-by-step troubleshooting procedures.</p>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow border border-slate-200 space-y-4">
+          <h3 class="text-base font-bold text-slate-800 border-b border-slate-100 pb-2">Direct Confluence Knowledge Base Links</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            <a href="https://lw-jira.atlassian.net/wiki/spaces/MNO/pages/2137587742/General+Runbooks+-+FortiGate+Velo+and+MRS" target="_blank" rel="noopener noreferrer" class="p-4 rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 transition group flex flex-col justify-between">
+              <div>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600">Core Runbook</span>
+                <h4 class="font-bold text-sm text-slate-800 group-hover:text-blue-700 mt-1">General Runbooks - FortiGate, Velo, and MRS</h4>
+                <p class="text-xs text-slate-500 mt-1">Covers standard alert handling and baseline diagnostics across key platforms.</p>
+              </div>
+              <span class="text-xs font-semibold text-blue-600 mt-3 inline-flex items-center">Open Confluence &rarr;</span>
+            </a>
+
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- RIGHT SIDEBAR: Passwords, 2FA Authenticator & Call Scripting -->
+    <aside class="w-full lg:w-72 flex-shrink-0 space-y-4">
+      <!-- Passwords & 2FA Container -->
+      <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="text-base">🔑</span>
+            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Passwords & 2FA</h3>
+          </div>
+          <button type="button" onclick="openCredModal()" class="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">+ Add Cred</button>
+        </div>
+        <div class="flex items-center justify-between text-[11px] text-slate-500 mb-2.5">
+          <span>Click field to copy details</span>
+          <span id="totpTimer" class="font-mono text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold">30s</span>
+        </div>
+
+        <!-- Credentials Container -->
+        <div id="credentialsList" class="space-y-2.5 max-h-48 overflow-y-auto pr-1 sidebar-scroll">
+          <!-- Dynamic Credentials & 2FA render here -->
+        </div>
+      </div>
+
+      <!-- Call Scripting Helper Container -->
+      <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-base">📞</span>
+            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Call Scripting Hub</h3>
+          </div>
+          <span id="callScriptBadge" class="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded uppercase">Pending Email</span>
+        </div>
+
+        <p class="text-[11px] text-slate-500 leading-tight">
+          Auto-generated call verifications update here as soon as you copy a populated email.
+        </p>
+
+        <!-- Call Outcome Toggle Tabs -->
+        <div class="flex rounded-lg bg-slate-100 p-1 text-[11px] font-semibold">
+          <button type="button" id="tabCallCustomer" onclick="switchCallTab('customer')" class="flex-1 py-1 rounded-md transition text-slate-600 bg-white shadow-sm text-center cursor-pointer">
+            1. Customer Call
+          </button>
+          <button type="button" id="tabCallVM" onclick="switchCallTab('vm')" class="flex-1 py-1 rounded-md transition text-slate-600 text-center cursor-pointer">
+            2. Voicemail
+          </button>
+        </div>
+
+        <!-- Call Content Box -->
+        <div class="relative bg-slate-50 rounded-lg border border-slate-200 p-2.5 min-h-[160px] flex flex-col justify-between">
+          <div id="callScriptContent" class="text-xs font-mono text-slate-700 whitespace-pre-wrap leading-relaxed max-h-56 overflow-y-auto pr-1 sidebar-scroll">
+            <span class="text-slate-400 italic font-sans text-[11px]">No active email copied yet. Populated call scripts will appear here automatically.</span>
+          </div>
+          
+          <button type="button" onclick="openCallScriptPopUp()" class="mt-2 text-[11px] bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1.5 px-3 rounded transition text-center cursor-pointer shadow-sm w-full flex items-center justify-center gap-1.5">
+            <span>🔍 View Script Details Pop Up</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- CENTERED POP-UP MODAL FOR CALL SCRIPT DETAILS -->
+  <div id="callScriptModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+      
+      <!-- Modal Header -->
+      <div class="bg-slate-900 text-white p-4 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">📞</span>
+          <div>
+            <h3 class="text-base font-bold leading-tight" id="modalCompanyHeader">Call Scripting Details</h3>
+            <p class="text-xs text-slate-400">RapidScale Operational Call Verification Summary</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeCallScriptPopUp()" class="text-slate-400 hover:text-white text-2xl font-bold px-2 py-0.5 rounded transition cursor-pointer">&times;</button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-6 space-y-5 overflow-y-auto flex-grow text-xs text-slate-700">
+        
+        <!-- Key Metadata Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-blue-50/60 p-4 rounded-xl border border-blue-100">
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600 block">Customer / Company</span>
+            <span id="popModalCompany" class="font-bold text-sm text-slate-800">--</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600 block">Primary Contact Name</span>
+            <span id="popModalContact" class="font-bold text-sm text-slate-800">--</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600 block">Phone / Mobile</span>
+            <span id="popModalPhone" class="font-mono font-semibold text-slate-800">--</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600 block">Location / Site Address</span>
+            <span id="popModalLocation" class="font-medium text-slate-800">--</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600 block">Circuit / Carrier & Port</span>
+            <span id="popModalCircuit" class="font-mono font-semibold text-slate-800">--</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600 block">Estimated Time of Restoration (ETR)</span>
+            <span id="popModalETR" class="font-mono font-semibold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded inline-block">--</span>
+          </div>
+        </div>
+
+        <!-- Script Tabs inside Pop Up -->
+        <div>
+          <div class="flex items-center justify-between border-b border-slate-200 pb-2 mb-3">
+            <h4 class="font-bold text-slate-800 uppercase tracking-wider text-[11px]">Generated Call Script</h4>
+            <div class="flex rounded-lg bg-slate-200 p-1 text-[11px] font-semibold gap-1">
+              <button type="button" id="popTabCustomer" onclick="switchCallTab('customer')" class="px-3 py-1 rounded transition text-blue-700 bg-white shadow-sm font-bold cursor-pointer">Live Call Script</button>
+              <button type="button" id="popTabVM" onclick="switchCallTab('vm')" class="px-3 py-1 rounded transition text-slate-600 hover:text-slate-900 cursor-pointer">Voicemail Script</button>
+            </div>
+          </div>
+
+          <div class="bg-slate-900 text-slate-100 p-4 rounded-xl font-mono text-xs whitespace-pre-wrap leading-relaxed shadow-inner border border-slate-800 max-h-64 overflow-y-auto" id="popModalScriptText">
+            <!-- Active script text populates here -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="bg-slate-50 p-4 border-t border-slate-200 flex justify-between items-center">
+        <span class="text-[11px] text-slate-500">Clicking below copies the active script to your clipboard.</span>
+        <div class="flex gap-2">
+          <button type="button" onclick="closeCallScriptPopUp()" class="px-4 py-2 border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-lg font-semibold text-xs transition cursor-pointer">Close</button>
+          <button type="button" onclick="copyPopUpScriptText()" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs transition shadow-md cursor-pointer flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+            <span>Copy Active Script</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Add/Edit Password & Authenticator Credential Modal -->
+  <div id="credModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+        <h3 id="credModalTitle" class="text-lg font-bold text-slate-800">Add Credential / 2FA</h3>
+        <button type="button" onclick="closeCredModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl cursor-pointer">&times;</button>
+      </div>
+      <form id="credForm" onsubmit="saveCred(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="editCredIndex" value="-1">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Service / Portal Name</label>
+          <input type="text" id="inputCredService" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g. FortiManager Admin / Cisco Velo">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Username / ID</label>
+          <input type="text" id="inputCredUser" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g. admin_ops@rapidscale.net">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Password</label>
+          <input type="text" id="inputCredPass" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-xs" placeholder="Enter password...">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">2FA / Authenticator Secret Key (Optional)</label>
+          <input type="text" id="inputCredSecret" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-xs uppercase" placeholder="e.g. JBSWY3DPEHPK3PXP (for 6-digit code)">
+          <p class="text-[10px] text-slate-400 mt-1">If entered, a live-updating 6-digit 2FA code will be automatically calculated.</p>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeCredModal()" class="px-4 py-2 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-100 font-medium cursor-pointer">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium cursor-pointer">Save Credential</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add/Edit Quick Note Modal -->
+  <div id="quickNoteModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+        <h3 id="noteModalTitle" class="text-lg font-bold text-slate-800">Add Quick Side Note</h3>
+        <button type="button" onclick="closeQuickNoteModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl cursor-pointer">&times;</button>
+      </div>
+      <form id="quickNoteForm" onsubmit="saveQuickNote(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="editNoteIndex" value="-1">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Title / Known Case Issue</label>
+          <input type="text" id="inputNoteTitle" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g. VCO115 Config Alert Ignore">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Reusable Note Content</label>
+          <textarea id="inputNoteBody" rows="4" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-xs" placeholder="Paste the standard notes or response text here..."></textarea>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeQuickNoteModal()" class="px-4 py-2 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-100 font-medium cursor-pointer">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium cursor-pointer">Save Note</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add/Edit Client Modal -->
+  <div id="clientModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+        <h3 id="modalTitle" class="text-lg font-bold text-slate-800">Add Client & Primary Contact</h3>
+        <button type="button" onclick="closeClientModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl cursor-pointer">&times;</button>
+      </div>
+      <form id="clientForm" onsubmit="saveClient(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="editIndex" value="-1">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Account ID</label>
+          <input type="text" id="inputAccountId" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g. ACC-10928">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Client Name</label>
+          <input type="text" id="inputAccountName" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g. Blue Beacon International">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Primary Contact Name</label>
+          <input type="text" id="inputContactName" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g. John Doe">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Phone Number</label>
+          <input type="text" id="inputContactPhone" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g. 555-0192">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Email Address</label>
+          <input type="email" id="inputContactEmail" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g. jdoe@example.com">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Special Handling Notes</label>
+          <textarea id="inputNotes" rows="3" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Enter custom dispatch instructions or site details..."></textarea>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeClientModal()" class="px-4 py-2 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-100 font-medium cursor-pointer">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium cursor-pointer">Save Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dispatch Email Template Popout Modal -->
+  <div id="templateModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center hidden z-50 overflow-y-auto py-6">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl p-6 space-y-4 my-auto">
+      <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+        <div>
+          <h3 class="text-lg font-bold text-slate-800">Dispatch Email Template</h3>
+          <p class="text-xs text-slate-500" id="tplModalSubhead">Select contact, template, enter link details, carrier/circuit types, and location to auto-populate email.</p>
+        </div>
+        <button type="button" onclick="closeTemplateModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl cursor-pointer">&times;</button>
+      </div>
+
+      <!-- Company Name Field -->
+      <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
+        <label class="block text-xs font-semibold text-blue-900 mb-1">Company Name</label>
+        <input type="text" id="companyNameInput" onkeyup="updatePopoutTemplateText()" placeholder="Enter Company Name" class="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs font-semibold text-blue-900 bg-white">
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Select Email Template Category</label>
+          <select id="categorySelect" onchange="handleCategorySelectChange()" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs font-medium">
+            <option value="" disabled selected>-- Select Category --</option>
+            <option value="edge-velo">Edge Velo</option>
+            <option value="fortigate">FortiGate</option>
+            <option value="general">General</option>
+            <option value="meraki">Meraki</option>
+            <option value="custom">Service Restored</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Select Email Template</label>
+          <select id="templateSelect" onchange="handleTemplateSelectChange()" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs font-medium hidden">
+          </select>
+        </div>
+      </div>
+
+      <!-- LTE Data Usage Input -->
+      <div id="lteUsageContainer" class="hidden bg-slate-50 p-3 rounded-lg border border-slate-200">
+        <label class="block text-xs font-semibold text-slate-700 mb-1">LTE Data Usage</label>
+        <input type="text" id="lteUsageInput" onkeyup="updatePopoutTemplateText()" placeholder="e.g. 5.4 GB / Unlimited" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs bg-white">
+      </div>
+
+      <!-- Hostname Input -->
+      <div id="hostnameContainer" class="hidden bg-slate-50 p-3 rounded-lg border border-slate-200">
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Hostname</label>
+        <input type="text" id="hostnameInput" onkeyup="updatePopoutTemplateText()" placeholder="e.g. FG-DAL-01" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs bg-white">
+      </div>
+
+      <!-- Single Site Location & ETR Inputs (Default) -->
+      <div id="singleSiteContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Site Location</label>
+          <input type="text" id="siteLocationInput" onkeyup="updatePopoutTemplateText()" placeholder="e.g. Dallas - Site #102" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">ETR (Estimated Time of Restoration)</label>
+          <input type="text" id="etrInput" onkeyup="updatePopoutTemplateText()" placeholder="e.g. 2 Hours / 04:00 PM EST / TBD" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs">
+        </div>
+      </div>
+
+      <!-- Dynamic Multi-Location and Case Field Container (For Multiple Link Down) -->
+      <div id="multiLocationContainer" class="hidden space-y-3 bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+        <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+          <div>
+            <label class="block text-xs font-bold text-slate-800">Multiple Locations & Cases Setup</label>
+            <p class="text-[11px] text-slate-500">Add or remove case and site location pairings dynamically.</p>
+          </div>
+          <button type="button" onclick="addLocationPair()" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded text-xs font-semibold transition cursor-pointer select-none">
+            + Add Location
+          </button>
+        </div>
+
+        <!-- Dynamic Rows List -->
+        <div id="locationPairsList" class="space-y-2">
+          <!-- Default Row 1 -->
+          <div class="location-pair-row grid grid-cols-1 sm:grid-cols-12 gap-2 items-center" id="locRow-1">
+            <div class="sm:col-span-5">
+              <input type="text" id="caseInput1" onkeyup="updatePopoutTemplateText()" placeholder="Case Number 1 (e.g. CAS-12345)" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs">
+            </div>
+            <div class="sm:col-span-6">
+              <input type="text" id="siteLocationInput1" onkeyup="updatePopoutTemplateText()" placeholder="Site Location 1 (e.g. Dallas - Site #102)" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs">
+            </div>
+            <div class="sm:col-span-1 text-center">
+              <button type="button" onclick="removeLocationPair(1)" class="text-rose-600 hover:text-rose-800 font-bold text-base px-2 py-1 rounded hover:bg-rose-50 transition cursor-pointer" title="Remove Location">&times;</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Carrier / Circuit Types and Associated Ports Inputs -->
+      <div class="space-y-2 border-t border-slate-100 pt-2">
+        <div class="flex justify-between items-center">
+          <label id="carrierSectionLabel" class="block text-xs font-semibold text-slate-700">Carrier / Circuit Type & Associated Port</label>
+          <button type="button" onclick="clearAllCarriersAndPorts()" class="text-[10px] text-rose-600 hover:underline">Clear All</button>
+        </div>
+
+        <!-- Pair 1 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <input type="text" id="carrierInput1" onkeyup="updatePopoutTemplateText()" placeholder="Carrier / Circuit Type 1 (e.g. Cox)" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs">
+          </div>
+          <div>
+            <input type="text" id="portInput1" onkeyup="updatePopoutTemplateText()" placeholder="Associated Port 1 (e.g. GE1)" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs">
+          </div>
+        </div>
+
+        <!-- Extra Pairs Container -->
+        <div id="extraCarrierPairsContainer" class="hidden space-y-2">
+          <!-- Pair 2 -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <input type="text" id="carrierInput2" onkeyup="updatePopoutTemplateText()" placeholder="Carrier / Circuit Type 2 (e.g. Spectrum)" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs">
+            </div>
+            <div>
+              <input type="text" id="portInput2" onkeyup="updatePopoutTemplateText()" placeholder="Associated Port 2 (e.g. GE2)" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs">
+            </div>
+          </div>
+
+          <!-- Pair 3 -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <input type="text" id="carrierInput3" onkeyup="updatePopoutTemplateText()" placeholder="Carrier / Circuit Type 3" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs">
+            </div>
+            <div>
+              <input type="text" id="portInput3" onkeyup="updatePopoutTemplateText()" placeholder="Associated Port 3" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs">
+            </div>
+          </div>
+
+          <!-- Pair 4 -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <input type="text" id="carrierInput4" onkeyup="updatePopoutTemplateText()" placeholder="Carrier / Circuit Type 4" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs">
+            </div>
+            <div>
+              <input type="text" id="portInput4" onkeyup="updatePopoutTemplateText()" placeholder="Associated Port 4" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Populated Body Preview</label>
+        <div id="popoutTemplatePreview" class="bg-slate-50 p-4 rounded-lg border border-slate-200 font-mono text-xs text-slate-700 whitespace-pre-wrap max-h-80 overflow-y-auto select-all"></div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeTemplateModal()" class="px-4 py-2 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-100 font-medium cursor-pointer text-xs">Close</button>
+        <button type="button" onclick="copyPopoutTemplate()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium cursor-pointer text-xs">Copy Populated Template</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create / Edit Email Template Modal -->
+  <div id="newTemplateModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+        <h3 id="templateModalTitle" class="text-lg font-bold text-slate-800">Create New Email Template</h3>
+        <button type="button" onclick="closeNewTemplateModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl cursor-pointer">&times;</button>
+      </div>
+      <form id="newTemplateForm" onsubmit="saveNewTemplate(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="editTemplateId" value="">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Template Title</label>
+          <input type="text" id="tplTitleInput" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g. Critical Secondary Link Outage">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Category / Platform</label>
+          <select id="tplCategoryInput" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <option value="edge-velo">Edge Velo</option>
+            <option value="fortigate">FortiGate</option>
+            <option value="general">General</option>
+            <option value="custom">Service Restored</option>
+            <option value="meraki">Meraki</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Usage Description</label>
+          <input type="text" id="tplDescInput" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g. Send when secondary link experiences degradation.">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Email Body Content</label>
+          <textarea id="tplBodyInput" rows="6" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-xs" placeholder="Dear {{Client_Name}},&#10;&#10;Our team detected an outage on your link at {{Site_Location}}. Current Data Usage: {{data_usage}}... ETR: {{ETR}}"></textarea>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeNewTemplateModal()" class="px-4 py-2 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-100 font-medium cursor-pointer">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium cursor-pointer">Save Template</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let loadedDirectoryRecords = [];
+    let loadedSpecialRecords = [];
+    let customTemplates = [];
+    let quickNotes = [];
+    let credentials = [];
+    let activeClientIndex = -1;
+    let toastTimeout = null;
+
+    // Location & Case Pair Dynamic Tracking State
+    let locationPairCount = 1;
+
+    // Call Scripts Storage State
+    let activeCallTab = 'customer'; // 'customer' or 'vm'
+    let generatedCustomerScript = "";
+    let generatedVMScript = "";
+    
+    // Extracted Email Context Data
+    let extractedData = {
+      company: "--",
+      contact: "--",
+      phone: "--",
+      location: "--",
+      circuit: "--",
+      etr: "--"
+    };
+
+    // Helper HTML safety escapers
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function escapeJsString(str) {
+      if (!str) return '';
+      return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+    }
+
+    // Default preset notes
+    const defaultNotes = [
+      {
+        title: "VCO115 Config Alert Ignore",
+        body: "VCO115 Alerts for 616 N 16th St can be ignored as it is still being configured by arch. 01578390 Hours of Operation in PHST for reference are 10:00 PM – 7:00 AM"
+      },
+      {
+        title: "Carrier Dispatch Standard Note",
+        body: "Ticket escalated to local ISP carrier. Awaiting field dispatch technician assignment and ETR update."
+      },
+      {
+        title: "False Alarm / Auto Recovered",
+        body: "BGP Session / WAN Link bounced momentarily and auto-recovered. No customer impact observed; closing ticket."
+      }
+    ];
+
+    // Default Passwords & 2FA Tokens
+    const defaultCredentials = [
+      {
+        service: "FortiManager Admin Portal",
+        user: "ops_admin",
+        pass: "FortiPass2026!#",
+        secret: "JBSWY3DPEHPK3PXP"
+      },
+      {
+        service: "Cisco VeloCloud Orchestrator",
+        user: "network_support",
+        pass: "VeloSecuredPass99$",
+        secret: ""
+      }
+    ];
+
+    const predefinedTemplates = {
+      'edge-velo': [
+        { id: 'tpl-edge-velo-multi-link-down', title: 'Multiple Link Down' }
+      ],
+      'fortigate': [],
+      'general': [],
+      'meraki': [],
+      'custom': []
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+      loadDirectoryFromLocalStorage();
+      loadSpecialFromLocalStorage();
+      loadCustomTemplates();
+      loadQuickNotes();
+      loadCredentials();
+
+      setInterval(updateTOTPCodes, 1000);
+      updateTOTPCodes();
+
+      document.addEventListener("click", (e) => {
+        const target = e.target;
+        if (target && target.classList.contains("loc-cell")) {
+          const currentStatus = target.getAttribute("data-status");
+          if (currentStatus === "att") {
+            target.className = "p-3 font-mono text-amber-600 font-semibold loc-cell status-dsr";
+            target.setAttribute("data-status", "dsr");
+          } else if (currentStatus === "dsr") {
+            target.className = "p-3 font-mono text-amber-600 font-semibold loc-cell status-green";
+            target.setAttribute("data-status", "green");
+          } else if (currentStatus === "green") {
+            target.className = "p-3 font-mono text-amber-600 font-semibold loc-cell status-cox";
+            target.setAttribute("data-status", "cox");
+          } else {
+            target.className = "p-3 font-mono text-amber-600 font-semibold loc-cell status-att";
+            target.setAttribute("data-status", "att");
+          }
+        }
+      });
+    });
+
+    /* Automatic Toast Notification Function */
+    function showToast(message = "Copied to clipboard!") {
+      const toast = document.getElementById("toastNotification");
+      const msgElem = document.getElementById("toastMessage");
+      if (!toast || !msgElem) return;
+
+      msgElem.innerText = message;
+      toast.classList.remove("translate-y-[-100px]", "opacity-0");
+      toast.classList.add("translate-y-0", "opacity-100");
+
+      if (toastTimeout) clearTimeout(toastTimeout);
+
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove("translate-y-0", "opacity-100");
+        toast.classList.add("translate-y-[-100px]", "opacity-0");
+      }, 2000);
+    }
+
+    function copyToClipboardText(text, label = "Copied to clipboard!") {
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(() => {
+        showToast(label);
+      });
+    }
+
+    function copyToClipboard(elementId) {
+      const elem = document.getElementById(elementId);
+      if (!elem) return;
+      copyToClipboardText(elem.innerText);
+    }
+
+    /* Passwords & Authenticator 2FA Logic */
+    function loadCredentials() {
+      const saved = localStorage.getItem('ops_credentials');
+      if (saved) {
+        try { credentials = JSON.parse(saved); } catch(e) { credentials = [...defaultCredentials]; }
+      } else {
+        credentials = [...defaultCredentials];
+        localStorage.setItem('ops_credentials', JSON.stringify(credentials));
+      }
+      renderCredentials();
+    }
+
+    function renderCredentials() {
+      const container = document.getElementById("credentialsList");
+      if (!container) return;
+      container.innerHTML = "";
+
+      if (credentials.length === 0) {
+        container.innerHTML = `<div class="text-xs text-slate-400 italic text-center py-4">No credentials saved. Click + Add Cred to add one.</div>`;
+        return;
+      }
+
+      credentials.forEach((cred, idx) => {
+        const card = document.createElement("div");
+        card.className = "bg-slate-50 border border-slate-200 p-2.5 rounded-lg transition group relative";
+
+        let totpHTML = "";
+        if (cred.secret && cred.secret.trim() !== "") {
+          totpHTML = `
+            <div class="mt-2 pt-2 border-t border-slate-200/80 flex items-center justify-between">
+              <div>
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">6-Digit 2FA Code</span>
+                <span id="totp-code-${idx}" class="text-sm font-mono font-bold text-emerald-600 tracking-wider">------</span>
+              </div>
+              <button type="button" onclick="copyCurrentTOTP(${idx})" class="text-[10px] bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-semibold px-2 py-1 rounded transition cursor-pointer">
+                Copy 2FA
+              </button>
+            </div>
+          `;
+        }
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="font-bold text-xs text-slate-800 truncate pr-6">${escapeHtml(cred.service)}</span>
+            <div class="absolute top-2 right-2 flex items-center gap-1 opacity-80 group-hover:opacity-100">
+              <button type="button" onclick="openCredModal(${idx})" class="text-[10px] text-slate-400 hover:text-blue-600 px-1 font-medium">Edit</button>
+              <button type="button" onclick="deleteCred(${idx})" class="text-[10px] text-slate-400 hover:text-rose-600 px-1 font-bold">&times;</button>
+            </div>
+          </div>
+          
+          <div class="space-y-1">
+            ${cred.user ? `
+            <div onclick="copyToClipboardText('${escapeJsString(cred.user)}', 'Username copied!')" class="flex items-center justify-between bg-white p-1 px-1.5 rounded border border-slate-200/70 hover:border-blue-300 cursor-pointer transition">
+              <span class="text-[10px] text-slate-500">User:</span>
+              <span class="text-[11px] font-mono text-slate-700 truncate">${escapeHtml(cred.user)}</span>
+            </div>
+            ` : ''}
+
+            <div onclick="copyToClipboardText('${escapeJsString(cred.pass)}', 'Password copied!')" class="flex items-center justify-between bg-white p-1 px-1.5 rounded border border-slate-200/70 hover:border-blue-300 cursor-pointer transition">
+              <span class="text-[10px] text-slate-500">Pass:</span>
+              <span class="text-[11px] font-mono text-blue-600 font-semibold">•••••••• (Click Copy)</span>
+            </div>
+          </div>
+
+          ${totpHTML}
+        `;
+        container.appendChild(card);
+      });
+
+      updateTOTPCodes();
+    }
+
+    function generateTOTP(secret) {
+      try {
+        if (!secret || typeof OTPAuth === "undefined") return "------";
+        const cleanSecret = secret.replace(/\s+/g, '').toUpperCase();
+        const totp = new OTPAuth.TOTP({
+          issuer: "RapidScale",
+          label: "Operations",
+          algorithm: "SHA1",
+          digits: 6,
+          period: 30,
+          secret: OTPAuth.Secret.fromBase32(cleanSecret)
+        });
+        return totp.generate();
+      } catch (err) {
+        return "ERROR";
+      }
+    }
+
+    function updateTOTPCodes() {
+      const now = Math.floor(Date.now() / 1000);
+      const secondsLeft = 30 - (now % 30);
+      const timerElem = document.getElementById("totpTimer");
+      if (timerElem) timerElem.innerText = `${secondsLeft}s`;
+
+      credentials.forEach((cred, idx) => {
+        if (cred.secret) {
+          const codeElem = document.getElementById(`totp-code-${idx}`);
+          if (codeElem) {
+            codeElem.innerText = generateTOTP(cred.secret);
+          }
+        }
+      });
+    }
+
+    function copyCurrentTOTP(index) {
+      if (credentials[index] && credentials[index].secret) {
+        const code = generateTOTP(credentials[index].secret);
+        copyToClipboardText(code, "2FA Code copied!");
+      }
+    }
+
+    function openCredModal(index = -1) {
+      const modal = document.getElementById("credModal");
+      const title = document.getElementById("credModalTitle");
+      const editIdx = document.getElementById("editCredIndex");
+
+      if (!modal) return;
+      editIdx.value = index;
+
+      if (index >= 0 && credentials[index]) {
+        title.innerText = "Edit Credential / 2FA";
+        document.getElementById("inputCredService").value = credentials[index].service || "";
+        document.getElementById("inputCredUser").value = credentials[index].user || "";
+        document.getElementById("inputCredPass").value = credentials[index].pass || "";
+        document.getElementById("inputCredSecret").value = credentials[index].secret || "";
+      } else {
+        title.innerText = "Add Credential / 2FA";
+        document.getElementById("credForm")?.reset();
+      }
+      modal.classList.remove("hidden");
+    }
+
+    function closeCredModal() {
+      document.getElementById("credModal")?.classList.add("hidden");
+    }
+
+    function saveCred(e) {
+      e.preventDefault();
+      const editIdx = parseInt(document.getElementById("editCredIndex").value);
+      const service = document.getElementById("inputCredService").value.trim();
+      const user = document.getElementById("inputCredUser").value.trim();
+      const pass = document.getElementById("inputCredPass").value.trim();
+      const secret = document.getElementById("inputCredSecret").value.trim();
+
+      const newCred = { service, user, pass, secret };
+
+      if (editIdx >= 0 && editIdx < credentials.length) {
+        credentials[editIdx] = newCred;
+      } else {
+        credentials.unshift(newCred);
+      }
+
+      localStorage.setItem('ops_credentials', JSON.stringify(credentials));
+      renderCredentials();
+      closeCredModal();
+      showToast("Credential saved!");
+    }
+
+    function deleteCred(index) {
+      if (confirm("Delete this credential record?")) {
+        credentials.splice(index, 1);
+        localStorage.setItem('ops_credentials', JSON.stringify(credentials));
+        renderCredentials();
+        showToast("Credential deleted.");
+      }
+    }
+
+    /* Quick Side Notes System */
+    function loadQuickNotes() {
+      const saved = localStorage.getItem('ops_quick_notes');
+      if (saved) {
+        try { quickNotes = JSON.parse(saved); } catch(e) { quickNotes = [...defaultNotes]; }
+      } else {
+        quickNotes = [...defaultNotes];
+        localStorage.setItem('ops_quick_notes', JSON.stringify(quickNotes));
+      }
+      renderQuickNotes();
+    }
+
+    function renderQuickNotes() {
+      const container = document.getElementById("quickNotesList");
+      if (!container) return;
+      container.innerHTML = "";
+
+      if (quickNotes.length === 0) {
+        container.innerHTML = `<div class="text-xs text-slate-400 italic text-center py-4">No notes saved. Click + New Note to add one.</div>`;
+        return;
+      }
+
+      quickNotes.forEach((note, idx) => {
+        const card = document.createElement("div");
+        card.className = "bg-slate-50 hover:bg-blue-50/70 border border-slate-200 hover:border-blue-300 p-2.5 rounded-lg transition group relative cursor-pointer";
+        card.onclick = () => copyToClipboardText(note.body);
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-bold text-xs text-slate-800 group-hover:text-blue-700 leading-tight pr-8">${escapeHtml(note.title)}</span>
+            <div class="absolute top-2 right-2 flex items-center gap-1 opacity-80 group-hover:opacity-100">
+              <button type="button" onclick="event.stopPropagation(); openQuickNoteModal(${idx})" class="text-[10px] text-slate-400 hover:text-blue-600 px-1 font-medium">Edit</button>
+              <button type="button" onclick="event.stopPropagation(); deleteQuickNote(${idx})" class="text-[10px] text-slate-400 hover:text-rose-600 px-1 font-bold">&times;</button>
+            </div>
+          </div>
+          <p class="text-[11px] text-slate-600 line-clamp-3 font-mono leading-relaxed bg-white/60 p-1.5 rounded border border-slate-100">${escapeHtml(note.body)}</p>
+          <div class="mt-1.5 flex items-center justify-between text-[10px] text-blue-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+            <span>Click to copy note</span>
+            <span>⚡ Copy</span>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function openQuickNoteModal(index = -1) {
+      const modal = document.getElementById("quickNoteModal");
+      const title = document.getElementById("noteModalTitle");
+      const editIdx = document.getElementById("editNoteIndex");
+
+      if (!modal) return;
+      editIdx.value = index;
+
+      if (index >= 0 && quickNotes[index]) {
+        title.innerText = "Edit Quick Side Note";
+        document.getElementById("inputNoteTitle").value = quickNotes[index].title;
+        document.getElementById("inputNoteBody").value = quickNotes[index].body;
+      } else {
+        title.innerText = "Add Quick Side Note";
+        document.getElementById("quickNoteForm")?.reset();
+      }
+      modal.classList.remove("hidden");
+    }
+
+    function closeQuickNoteModal() {
+      document.getElementById("quickNoteModal")?.classList.add("hidden");
+    }
+
+    function saveQuickNote(e) {
+      e.preventDefault();
+      const editIdx = parseInt(document.getElementById("editNoteIndex").value);
+      const title = document.getElementById("inputNoteTitle").value.trim();
+      const body = document.getElementById("inputNoteBody").value.trim();
+
+      if (editIdx >= 0 && editIdx < quickNotes.length) {
+        quickNotes[editIdx] = { title, body };
+      } else {
+        quickNotes.unshift({ title, body });
+      }
+
+      localStorage.setItem('ops_quick_notes', JSON.stringify(quickNotes));
+      renderQuickNotes();
+      closeQuickNoteModal();
+      showToast("Note saved!");
+    }
+
+    function deleteQuickNote(index) {
+      if (confirm("Delete this quick note?")) {
+        quickNotes.splice(index, 1);
+        localStorage.setItem('ops_quick_notes', JSON.stringify(quickNotes));
+        renderQuickNotes();
+      }
+    }
+
+    function switchTab(tabId) {
+      ['directory', 'special', 'templates', 'runbooks'].forEach(id => {
+        const sec = document.getElementById(`tab-${id}`);
+        const btn = document.getElementById(`btn-${id}`);
+        if (sec && btn) {
+          if (id === tabId) {
+            sec.classList.remove('hidden');
+            btn.className = 'px-3 py-2 rounded-md text-xs sm:text-sm font-semibold transition bg-slate-800 text-blue-400 cursor-pointer';
+          } else {
+            sec.classList.add('hidden');
+            btn.className = 'px-3 py-2 rounded-md text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer';
+          }
+        }
+      });
+    }
+
+    function filterDirectory(inputId, tableId) {
+      const input = document.getElementById(inputId).value.toLowerCase();
+      const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+      rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(input) ? "" : "none";
+      });
+    }
+
+    function getFieldValue(row, possibleKeys) {
+      if (!row) return "-";
+      const normalizedRow = {};
+      for (let k in row) {
+        if (Object.prototype.hasOwnProperty.call(row, k)) {
+          normalizedRow[k.trim().toLowerCase()] = row[k];
+        }
+      }
+      for (let key of possibleKeys) {
+        const targetKey = key.trim().toLowerCase();
+        const val = normalizedRow[targetKey];
+        if (val !== undefined && val !== null && String(val).trim() !== "" && String(val).trim() !== "undefined") {
+          return String(val).trim();
+        }
+      }
+      return "-";
+    }
+
+    /* Client Directory Management */
+    function handleFileUploadDirectory(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (typeof XLSX === "undefined") {
+        showToast("Error: SheetJS library failed to load.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { raw: false, defval: "" });
+
+          if (!jsonData || jsonData.length === 0) {
+            showToast("Uploaded file contains no data.");
+            return;
+          }
+
+          loadedDirectoryRecords = jsonData.map(row => ({
+            id: getFieldValue(row, ["ACCOUNT ID", "Account ID", "Account_ID", "Account", "ID"]),
+            name: getFieldValue(row, ["ACCOUNT NAME", "Account Name", "Account_Name", "Company", "Name"]),
+            contactName: getFieldValue(row, ["PRIMARY CONTACT", "Primary Contact", "Contact Name", "Contact", "Name", "GM"]),
+            contactPhone: getFieldValue(row, ["PHONE NUMBER", "Phone Number", "Phone", "Mobile", "Cell", "Contact Phone"]),
+            contactEmail: getFieldValue(row, ["EMAIL ADDRESS", "Email Address", "Email", "Contact Email", "Primary Email"]),
+            notes: getFieldValue(row, ["SPECIAL HANDLING NOTES", "Special Handling Notes", "SpecialHandlingNotes", "Notes", "Handling Notes"])
+          }));
+
+          localStorage.setItem('ops_directory_data', JSON.stringify(loadedDirectoryRecords));
+          renderDirectoryRows(loadedDirectoryRecords);
+          showToast(`Imported ${loadedDirectoryRecords.length} records!`);
+        } catch (err) {
+          console.error("Error processing file:", err);
+          showToast("Error reading Excel file.");
+        } finally {
+          event.target.value = '';
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function renderDirectoryRows(records) {
+      const tbody = document.querySelector("#directoryTable tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      const dataToRender = records && records.length > 0 ? records : loadedDirectoryRecords;
+
+      if (!dataToRender || dataToRender.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No client records found. Use "+ Add Client" or "Import Excel" to load data.</td></tr>`;
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+      dataToRender.forEach((rec, index) => {
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+        tr.innerHTML = `
+          <td class="p-3 font-mono font-semibold">
+            <button onclick="openTemplateModal(${index})" class="text-blue-600 hover:text-blue-800 hover:underline focus:outline-none flex items-center gap-1 cursor-pointer">
+              <span>${escapeHtml(rec.id)}</span>
+              <span class="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-sans">Send Email</span>
+            </button>
+          </td>
+          <td class="p-3 font-semibold text-slate-800">${escapeHtml(rec.name)}</td>
+          <td class="p-3 font-medium text-slate-700">${escapeHtml(rec.contactName || '-')}</td>
+          <td class="p-3 font-mono text-xs text-slate-700">${escapeHtml(rec.contactPhone || '-')}</td>
+          <td class="p-3 font-mono text-xs text-blue-600">${escapeHtml(rec.contactEmail || '-')}</td>
+          <td class="p-3 text-slate-600 text-xs">${escapeHtml(rec.notes || '-')}</td>
+          <td class="p-3 text-center space-x-2">
+            <button onclick="openClientModal(${index})" class="text-xs text-blue-600 hover:text-blue-800 font-medium cursor-pointer">Edit</button>
+            <button onclick="deleteClient(${index})" class="text-xs text-rose-600 hover:text-rose-800 font-medium cursor-pointer">Delete</button>
+          </td>
+        `;
+        fragment.appendChild(tr);
+      });
+      tbody.appendChild(fragment);
+    }
+
+    function loadDirectoryFromLocalStorage() {
+      const savedData = localStorage.getItem('ops_directory_data');
+      if (savedData) {
+        try {
+          loadedDirectoryRecords = JSON.parse(savedData);
+          renderDirectoryRows(loadedDirectoryRecords);
+        } catch (e) {
+          renderDirectoryRows([]);
+        }
+      } else {
+        renderDirectoryRows([]);
+      }
+    }
+
+    function openClientModal(index = -1) {
+      const modal = document.getElementById("clientModal");
+      const modalTitle = document.getElementById("modalTitle");
+      const editIndex = document.getElementById("editIndex");
+
+      if (!modal) return;
+      editIndex.value = index;
+
+      if (index >= 0) {
+        const rec = loadedDirectoryRecords[index];
+        if (rec) {
+          if (modalTitle) modalTitle.innerText = "Edit Client & Primary Contact";
+          document.getElementById("inputAccountId").value = rec.id || "";
+          document.getElementById("inputAccountName").value = rec.name || "";
+          document.getElementById("inputContactName").value = rec.contactName || "";
+          document.getElementById("inputContactPhone").value = rec.contactPhone || "";
+          document.getElementById("inputContactEmail").value = rec.contactEmail || "";
+          document.getElementById("inputNotes").value = rec.notes || "";
+        }
+      } else {
+        if (modalTitle) modalTitle.innerText = "Add Client & Primary Contact";
+        document.getElementById("clientForm")?.reset();
+      }
+      modal.classList.remove("hidden");
+    }
+
+    function closeClientModal() {
+      document.getElementById("clientModal")?.classList.add("hidden");
+    }
+
+    function saveClient(event) {
+      event.preventDefault();
+      const editIndex = parseInt(document.getElementById("editIndex").value);
+
+      const newRecord = {
+        id: document.getElementById("inputAccountId").value.trim(),
+        name: document.getElementById("inputAccountName").value.trim(),
+        contactName: document.getElementById("inputContactName").value.trim(),
+        contactPhone: document.getElementById("inputContactPhone").value.trim(),
+        contactEmail: document.getElementById("inputContactEmail").value.trim(),
+        notes: document.getElementById("inputNotes").value.trim()
+      };
+
+      if (editIndex >= 0 && editIndex < loadedDirectoryRecords.length) {
+        loadedDirectoryRecords[editIndex] = newRecord;
+      } else {
+        loadedDirectoryRecords.unshift(newRecord);
+      }
+
+      localStorage.setItem('ops_directory_data', JSON.stringify(loadedDirectoryRecords));
+      renderDirectoryRows(loadedDirectoryRecords);
+      closeClientModal();
+      showToast("Client record saved!");
+    }
+
+    function deleteClient(index) {
+      if (confirm("Are you sure you want to delete this client record?")) {
+        loadedDirectoryRecords.splice(index, 1);
+        localStorage.setItem('ops_directory_data', JSON.stringify(loadedDirectoryRecords));
+        renderDirectoryRows(loadedDirectoryRecords);
+        showToast("Record deleted.");
+      }
+    }
+
+    /* Special Customers Hub Management */
+    function handleFileUploadSpecial(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (typeof XLSX === "undefined") {
+        showToast("Error: SheetJS library failed to load.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { raw: false, defval: "" });
+
+          loadedSpecialRecords = jsonData.map(row => ({
+            locNum: getFieldValue(row, ["Loc #", "Loc", "Location #", "LocNum"]),
+            locName: getFieldValue(row, ["Location Name", "Loc Name", "Name"]),
+            address: getFieldValue(row, ["Address", "Location Address", "Full Address"]),
+            contactGM: getFieldValue(row, ["Contact (GM)", "GM", "General Manager"]),
+            contactOM: getFieldValue(row, ["Contact (OM)", "OM", "Operations Manager"]),
+            phone: getFieldValue(row, ["Phone", "Phone Number"]),
+            mobile: getFieldValue(row, ["Mobile Number", "Cell"]),
+            connType: getFieldValue(row, ["Connection Type", "Conn Type"]),
+            carrier: getFieldValue(row, ["Carrier Name", "Carrier"]),
+            speed: getFieldValue(row, ["Connection Speed", "Speed"])
+          }));
+
+          localStorage.setItem('ops_special_data', JSON.stringify(loadedSpecialRecords));
+          renderSpecialRows(loadedSpecialRecords);
+          showToast(`Imported ${loadedSpecialRecords.length} locations!`);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          event.target.value = '';
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function renderSpecialRows(records) {
+      const tbody = document.querySelector("#specialTable tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      const dataToRender = records && records.length > 0 ? records : loadedSpecialRecords;
+
+      if (!dataToRender || dataToRender.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-slate-400">No special customer records found.</td></tr>`;
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+      dataToRender.forEach(rec => {
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-amber-50/50 transition border-b border-slate-100";
+        tr.innerHTML = `
+          <td class="p-3 font-mono text-amber-600 font-semibold loc-cell status-att" data-status="att">${escapeHtml(rec.locNum)}</td>
+          <td class="p-3 font-semibold text-slate-800">${escapeHtml(rec.locName)}</td>
+          <td class="p-3 text-slate-600 text-xs">${escapeHtml(rec.address)}</td>
+          <td class="p-3 font-medium text-slate-700">${escapeHtml(rec.contactGM)}</td>
+          <td class="p-3 font-medium text-slate-700">${escapeHtml(rec.contactOM)}</td>
+          <td class="p-3 font-mono text-xs text-slate-700">${escapeHtml(rec.phone)}</td>
+          <td class="p-3 font-mono text-xs text-slate-700">${escapeHtml(rec.mobile)}</td>
+          <td class="p-3 text-slate-600 text-xs">${escapeHtml(rec.connType)}</td>
+          <td class="p-3 text-slate-600 text-xs">${escapeHtml(rec.carrier)}</td>
+          <td class="p-3 font-mono text-xs text-slate-600">${escapeHtml(rec.speed)}</td>
+        `;
+        fragment.appendChild(tr);
+      });
+      tbody.appendChild(fragment);
+    }
+
+    function loadSpecialFromLocalStorage() {
+      const savedData = localStorage.getItem('ops_special_data');
+      if (savedData) {
+        try {
+          loadedSpecialRecords = JSON.parse(savedData);
+          renderSpecialRows(loadedSpecialRecords);
+        } catch (e) {
+          renderSpecialRows([]);
+        }
+      } else {
+        renderSpecialRows([]);
+      }
+    }
+
+    function clearImportedData(key, tableId) {
+      if (confirm("Are you sure you want to clear this saved data?")) {
+        localStorage.removeItem(key);
+        if (key === 'ops_directory_data') {
+          loadedDirectoryRecords = [];
+          renderDirectoryRows([]);
+        } else {
+          loadedSpecialRecords = [];
+          renderSpecialRows([]);
+        }
+        showToast("Data cleared.");
+      }
+    }
+
+    /* Template Creation & Custom Template Management */
+    function openNewTemplateModal(editId = null) {
+      const modal = document.getElementById('newTemplateModal');
+      const title = document.getElementById('templateModalTitle');
+      const editInput = document.getElementById('editTemplateId');
+
+      if (editId) {
+        const tpl = customTemplates.find(t => t.id === editId);
+        if (tpl) {
+          title.innerText = "Edit Email Template";
+          editInput.value = tpl.id;
+          document.getElementById('tplTitleInput').value = tpl.title;
+          document.getElementById('tplCategoryInput').value = tpl.category;
+          document.getElementById('tplDescInput').value = tpl.desc;
+          document.getElementById('tplBodyInput').value = tpl.body;
+        }
+      } else {
+        title.innerText = "Create New Email Template";
+        editInput.value = "";
+        document.getElementById('newTemplateForm')?.reset();
+      }
+      modal?.classList.remove('hidden');
+    }
+
+    function closeNewTemplateModal() {
+      document.getElementById('newTemplateForm')?.reset();
+      document.getElementById('editTemplateId').value = "";
+      document.getElementById('newTemplateModal')?.classList.add('hidden');
+    }
+
+    function saveNewTemplate(e) {
+      e.preventDefault();
+      const editId = document.getElementById('editTemplateId').value;
+      const title = document.getElementById('tplTitleInput').value.trim();
+      const category = document.getElementById('tplCategoryInput').value;
+      const desc = document.getElementById('tplDescInput').value.trim();
+      const body = document.getElementById('tplBodyInput').value.trim();
+
+      if (editId) {
+        const index = customTemplates.findIndex(t => t.id === editId);
+        if (index !== -1) {
+          customTemplates[index] = { id: editId, title, category, desc, body };
+          localStorage.setItem('ops_custom_templates', JSON.stringify(customTemplates));
+          reRenderAllCustomTemplates();
+          showToast("Template updated!");
+        }
+      } else {
+        const templateId = `tpl-custom-${Date.now()}`;
+        const newTpl = { id: templateId, title, category, desc, body };
+        customTemplates.push(newTpl);
+        localStorage.setItem('ops_custom_templates', JSON.stringify(customTemplates));
+        renderCustomTemplateCard(newTpl);
+        showToast("Template created!");
+      }
+
+      closeNewTemplateModal();
+    }
+
+    function loadCustomTemplates() {
+      const saved = localStorage.getItem('ops_custom_templates');
+      if (saved) {
+        try {
+          customTemplates = JSON.parse(saved);
+          customTemplates.forEach(tpl => renderCustomTemplateCard(tpl));
+        } catch(e) {
+          console.error("Error loading custom templates", e);
+        }
+      }
+    }
+
+    function reRenderAllCustomTemplates() {
+      const grid = document.getElementById('templatesGrid');
+      if (grid) grid.innerHTML = "";
+      customTemplates.forEach(tpl => renderCustomTemplateCard(tpl));
+    }
+
+    function renderCustomTemplateCard(tpl) {
+      const grid = document.getElementById('templatesGrid');
+      if (!grid) return;
+
+      const card = document.createElement('div');
+      card.className = "tpl-card bg-white p-5 rounded-lg shadow border border-slate-200 flex flex-col justify-between";
+      card.setAttribute('data-category', tpl.category);
+      card.id = `card-${tpl.id}`;
+
+      card.innerHTML = `
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-base text-slate-800">${escapeHtml(tpl.title)}</h3>
+            <div class="flex items-center gap-1">
+              <span class="bg-blue-100 text-blue-800 text-[10px] font-semibold px-2 py-0.5 rounded capitalize">${escapeHtml(tpl.category)}</span>
+              <button onclick="openNewTemplateModal('${tpl.id}')" title="Edit Template" class="text-blue-600 hover:text-blue-800 font-semibold px-1 text-xs">Edit</button>
+              <button onclick="deleteCustomTemplate('${tpl.id}')" title="Delete Template" class="text-rose-500 hover:text-rose-700 font-bold px-1 text-sm">&times;</button>
+            </div>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">${escapeHtml(tpl.desc)}</p>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200 font-mono text-xs text-slate-700 mb-3 whitespace-pre-wrap max-h-60 overflow-y-auto" id="${tpl.id}">${escapeHtml(tpl.body)}</div>
+        </div>
+        <button type="button" onclick="copyToClipboard('${tpl.id}')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2 rounded transition font-medium w-full cursor-pointer">Copy Template</button>
+      `;
+      grid.appendChild(card);
+    }
+
+    function deleteCustomTemplate(id) {
+      if (confirm("Delete this template?")) {
+        customTemplates = customTemplates.filter(t => t.id !== id);
+        localStorage.setItem('ops_custom_templates', JSON.stringify(customTemplates));
+        document.getElementById(`card-${id}`)?.remove();
+        showToast("Template deleted.");
+      }
+    }
+
+    function filterTemplates(category) {
+      const buttons = document.querySelectorAll('.tpl-filter-btn');
+      buttons.forEach(btn => {
+        btn.className = 'tpl-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-200 text-slate-700 hover:bg-slate-300 cursor-pointer';
+      });
+
+      const activeBtn = document.getElementById(`tpl-btn-${category}`);
+      if (activeBtn) {
+        activeBtn.className = 'tpl-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-blue-600 text-white cursor-pointer';
+      }
+
+      const cards = document.querySelectorAll('.tpl-card');
+      cards.forEach(card => {
+        if (category === 'all' || card.getAttribute('data-category') === category) {
+          card.classList.remove('hidden');
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+    }
+
+    function openTemplateModal(clientIndex = -1) {
+      activeClientIndex = clientIndex;
+      const categorySelect = document.getElementById('categorySelect');
+      const templateSelect = document.getElementById('templateSelect');
+      const companyInput = document.getElementById('companyNameInput');
+
+      if (clientIndex >= 0 && loadedDirectoryRecords[clientIndex]) {
+        companyInput.value = loadedDirectoryRecords[clientIndex].name || "";
+      } else {
+        companyInput.value = "";
+      }
+
+      if (categorySelect) categorySelect.value = "";
+      if (templateSelect) {
+        templateSelect.innerHTML = "";
+        templateSelect.classList.add("hidden");
+      }
+      
+      handleTemplateSelectChange();
+      document.getElementById('lteUsageInput').value = "";
+      document.getElementById('hostnameInput').value = "";
+      document.getElementById('siteLocationInput').value = "";
+      document.getElementById('etrInput').value = "";
+      clearAllCarriersAndPorts();
+      document.getElementById('popoutTemplatePreview').innerText = "";
+      document.getElementById('templateModal')?.classList.remove('hidden');
+    }
+
+    function closeTemplateModal() {
+      document.getElementById('templateModal')?.classList.add('hidden');
+    }
+
+    /* Dynamic Add & Remove Location Functions */
+    function addLocationPair() {
+      locationPairCount++;
+      const listContainer = document.getElementById('locationPairsList');
+      if (!listContainer) return;
+
+      const newRow = document.createElement('div');
+      newRow.className = "location-pair-row grid grid-cols-1 sm:grid-cols-12 gap-2 items-center";
+      newRow.id = `locRow-${locationPairCount}`;
+
+      newRow.innerHTML = `
+        <div class="sm:col-span-5">
+          <input type="text" id="caseInput${locationPairCount}" onkeyup="updatePopoutTemplateText()" placeholder="Case Number ${locationPairCount} (e.g. CAS-1234${locationPairCount})" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs">
+        </div>
+        <div class="sm:col-span-6">
+          <input type="text" id="siteLocationInput${locationPairCount}" onkeyup="updatePopoutTemplateText()" placeholder="Site Location ${locationPairCount} (e.g. Site #${101 + locationPairCount})" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs">
+        </div>
+        <div class="sm:col-span-1 text-center">
+          <button type="button" onclick="removeLocationPair(${locationPairCount})" class="text-rose-600 hover:text-rose-800 font-bold text-base px-2 py-1 rounded hover:bg-rose-50 transition cursor-pointer" title="Remove Location">&times;</button>
+        </div>
+      `;
+
+      listContainer.appendChild(newRow);
+      updatePopoutTemplateText();
+    }
+
+    function removeLocationPair(id) {
+      const row = document.getElementById(`locRow-${id}`);
+      if (row) {
+        row.remove();
+        updatePopoutTemplateText();
+      }
+    }
+
+    function handleTemplateSelectChange() {
+      const category = document.getElementById('categorySelect').value;
+      const templateSelect = document.getElementById('templateSelect');
+      const selectedOptionText = templateSelect.options[templateSelect.selectedIndex]?.text || "";
+      const lteContainer = document.getElementById('lteUsageContainer');
+      const extraPairsContainer = document.getElementById('extraCarrierPairsContainer');
+      const carrierSectionLabel = document.getElementById('carrierSectionLabel');
+      
+      const singleSiteContainer = document.getElementById('singleSiteContainer');
+      const multiLocationContainer = document.getElementById('multiLocationContainer');
+
+      // Edge Velo Multiple Link Down dynamic toggle
+      if (category === 'edge-velo' && selectedOptionText.includes("Multiple Link Down")) {
+        if (multiLocationContainer) multiLocationContainer.classList.remove('hidden');
+        if (singleSiteContainer) singleSiteContainer.classList.add('hidden');
+      } else {
+        if (multiLocationContainer) multiLocationContainer.classList.add('hidden');
+        if (singleSiteContainer) singleSiteContainer.classList.remove('hidden');
+      }
+
+      // Display LTE Data Usage field if selected for FortiGate or specific LTE templates
+      if (category === 'fortigate' || selectedOptionText.includes("Primary Link Down (Failover to LTE)") || selectedOptionText.includes("Primary Link Down Restored")) {
+        lteContainer.classList.remove('hidden');
+      } else {
+        lteContainer.classList.add('hidden');
+        document.getElementById('lteUsageInput').value = "";
+      }
+
+      if (extraPairsContainer) extraPairsContainer.classList.add('hidden');
+      if (carrierSectionLabel) carrierSectionLabel.innerText = "Carrier / Circuit Type & Associated Port";
+      
+      for (let i = 2; i <= 4; i++) {
+        const cElem = document.getElementById(`carrierInput${i}`);
+        const pElem = document.getElementById(`portInput${i}`);
+        if (cElem) cElem.value = "";
+        if (pElem) pElem.value = "";
+      }
+
+      updatePopoutTemplateText();
+    }
+
+    function handleCategorySelectChange() {
+      const category = document.getElementById('categorySelect').value;
+      const templateSelect = document.getElementById('templateSelect');
+      const hostnameContainer = document.getElementById('hostnameContainer');
+      const lteContainer = document.getElementById('lteUsageContainer');
+
+      if (category === 'fortigate') {
+        hostnameContainer.classList.remove('hidden');
+        lteContainer.classList.remove('hidden');
+      } else {
+        hostnameContainer.classList.add('hidden');
+        lteContainer.classList.add('hidden');
+        document.getElementById('hostnameInput').value = "";
+        document.getElementById('lteUsageInput').value = "";
+      }
+
+      templateSelect.innerHTML = "";
+
+      let items = [...(predefinedTemplates[category] || [])];
+      
+      const customMatches = customTemplates.filter(t => t.category === category);
+      customMatches.forEach(t => items.push({ id: t.id, title: t.title }));
+
+      if (items.length === 0) {
+        templateSelect.classList.add("hidden");
+        document.getElementById('popoutTemplatePreview').innerText = "No templates found for this category.";
+        handleTemplateSelectChange();
+        return;
+      }
+
+      templateSelect.classList.remove("hidden");
+      
+      const defaultOption = document.createElement("option");
+      defaultOption.value = "";
+      defaultOption.disabled = true;
+      defaultOption.selected = true;
+      defaultOption.textContent = "-- Select Email Template --";
+      templateSelect.appendChild(defaultOption);
+
+      items.forEach(item => {
+        const opt = document.createElement("option");
+        opt.value = item.id;
+        opt.textContent = item.title;
+        templateSelect.appendChild(opt);
+      });
+
+      handleTemplateSelectChange();
+      document.getElementById('popoutTemplatePreview').innerText = "";
+    }
+
+    function clearAllCarriersAndPorts() {
+      for (let i = 1; i <= 4; i++) {
+        const cElem = document.getElementById(`carrierInput${i}`);
+        const pElem = document.getElementById(`portInput${i}`);
+        if (cElem) cElem.value = "";
+        if (pElem) pElem.value = "";
+      }
+      updatePopoutTemplateText();
+    }
+
+    function updatePopoutTemplateText() {
+      const templateId = document.getElementById('templateSelect').value;
+      if (!templateId) return;
+      
+      const rawElem = document.getElementById(templateId);
+      if (!rawElem) return;
+
+      const c1 = document.getElementById('carrierInput1').value.trim();
+      const p1 = document.getElementById('portInput1').value.trim();
+      const c2 = document.getElementById('carrierInput2').value.trim();
+      const p2 = document.getElementById('portInput2').value.trim();
+      const c3 = document.getElementById('carrierInput3').value.trim();
+      const p3 = document.getElementById('portInput3').value.trim();
+      const c4 = document.getElementById('carrierInput4').value.trim();
+      const p4 = document.getElementById('portInput4').value.trim();
+
+      const pairs = [];
+      if (c1 || p1) pairs.push(p1 ? `${c1} (Port ${p1})` : c1);
+      
+      const extraPairsContainer = document.getElementById('extraCarrierPairsContainer');
+      const isMultiLinkVisible = extraPairsContainer && !extraPairsContainer.classList.contains('hidden');
+
+      if (isMultiLinkVisible) {
+        if (c2 || p2) pairs.push(p2 ? `${c2} (Port ${p2})` : c2);
+        if (c3 || p3) pairs.push(p3 ? `${c3} (Port ${p3})` : c3);
+        if (c4 || p4) pairs.push(p4 ? `${c4} (Port ${p4})` : c4);
+      }
+
+      const carrierPortSummary = pairs.length > 0 ? pairs.join(', ') : "[Carrier/Port Details]";
+      const siteLocation = document.getElementById('siteLocationInput').value.trim() || "[Site Location]";
+      const etrVal = document.getElementById('etrInput').value.trim() || "[ETR]";
+      const hostname = document.getElementById('hostnameInput').value.trim() || "[Hostname]";
+      const dataUsageVal = document.getElementById('lteUsageInput').value.trim() || "[Data Usage]";
+      const companyName = document.getElementById('companyNameInput').value.trim() || "[Company Name]";
+
+      let text = rawElem.innerText;
+
+      // Multiple Locations dynamic string construction
+      const locationRows = document.querySelectorAll('.location-pair-row');
+      const locationListArray = [];
+      locationRows.forEach((row, idx) => {
+        const rowIdMatch = row.id.match(/\d+/);
+        if (rowIdMatch) {
+          const index = rowIdMatch[0];
+          const caseVal = document.getElementById(`caseInput${index}`)?.value.trim() || `[Case_${index}]`;
+          const locVal = document.getElementById(`siteLocationInput${index}`)?.value.trim() || `[Site_Location_${index}]`;
+          locationListArray.push(`• ${caseVal} - ${locVal}`);
+
+          const caseRegex = new RegExp(`{{Case_${index}}}`, 'g');
+          const locRegex = new RegExp(`{{Site_Location_${index}}}`, 'g');
+          text = text.replace(caseRegex, caseVal).replace(locRegex, locVal);
+        }
+      });
+
+      const dynamicLocationListString = locationListArray.length > 0 ? locationListArray.join('\n') : "• [Case_1] - [Site_Location_1]";
+      text = text.replace(/{{Dynamic_Location_List}}/g, dynamicLocationListString);
+
+      text = text
+        .replace(/{{Case_1}}/g, document.getElementById('caseInput1')?.value.trim() || "[Case_1]")
+        .replace(/{{Site_Location_1}}/g, document.getElementById('siteLocationInput1')?.value.trim() || "[Site_Location_1]");
+
+      text = text
+        .replace(/{{Carrier_Type_1}}/g, c1 || "[Carrier 1]")
+        .replace(/{{Port1}}/g, p1 || "[Port 1]")
+        .replace(/{{Carrier_Type_2}}/g, c2 || "[Carrier 2]")
+        .replace(/{{Port2}}/g, p2 || "[Port 2]")
+        .replace(/{{Carrier_Type_3}}/g, c3 || "[Carrier 3]")
+        .replace(/{{Port3}}/g, p3 || "[Port 3]")
+        .replace(/{{Carrier_Type_4}}/g, c4 || "[Carrier 4]")
+        .replace(/{{Port4}}/g, p4 || "[Port 4]");
+
+      text = text
+        .replace(/{{Circuit_Type}}/g, carrierPortSummary)
+        .replace(/{{Carrier_Type}}/g, carrierPortSummary)
+        .replace(/{{Carrier_Port_Summary}}/g, carrierPortSummary)
+        .replace(/{{Port}}/g, p1 || "[Port]")
+        .replace(/{{Hostname}}/g, hostname)
+        .replace(/{{Site_Location}}/g, siteLocation)
+        .replace(/{{Full_Address}}/g, siteLocation)
+        .replace(/{{location}}/g, siteLocation)
+        .replace(/{{data_usage}}/g, dataUsageVal)
+        .replace(/{{ETR}}/g, etrVal);
+
+      text = text
+        .replace(/Dear Client name/gi, `Dear ${companyName}`)
+        .replace(/Dear {{.*?}}/gi, `Dear ${companyName}`)
+        .replace(/Dear [^\n,]+/i, `Dear ${companyName}`);
+
+      text = text
+        .replace(/{{Account_Name}}/g, companyName)
+        .replace(/{{Client_Name}}/g, companyName);
+
+      document.getElementById('popoutTemplatePreview').innerText = text;
+    }
+
+    function copyPopoutTemplate() {
+      const text = document.getElementById('popoutTemplatePreview').innerText;
+      if (!text) {
+        showToast("Please select a template first.");
+        return;
+      }
+      
+      copyToClipboardText(text);
+
+      // Extract details for call script & pop up modal
+      const company = document.getElementById('companyNameInput').value.trim() || "Customer Account";
+      const location = document.getElementById('siteLocationInput1')?.value.trim() || document.getElementById('siteLocationInput')?.value.trim() || "Local Site Location";
+      const carrier = document.getElementById('carrierInput1').value.trim() || "Carrier Circuit";
+      const port = document.getElementById('portInput1').value.trim();
+      const etr = document.getElementById('etrInput').value.trim() || "Pending Carrier Update";
+      
+      let clientContact = "Primary Contact";
+      let clientPhone = "N/A";
+      if (activeClientIndex >= 0 && loadedDirectoryRecords[activeClientIndex]) {
+        clientContact = loadedDirectoryRecords[activeClientIndex].contactName || "Primary Contact";
+        clientPhone = loadedDirectoryRecords[activeClientIndex].contactPhone || "N/A";
+      }
+
+      const circuitInfo = port ? `${carrier} (Port ${port})` : carrier;
+
+      // Save Extracted Context
+      extractedData = {
+        company,
+        contact: clientContact,
+        phone: clientPhone,
+        location,
+        circuit: circuitInfo,
+        etr
+      };
+
+      // Customer Spoke Call Script
+      generatedCustomerScript = `[CUSTOMER LIVE CALL]
+• Greeting: "Hello ${clientContact}, calling from RapidScale Network Operations regarding ${company}."
+• Incident Notice: "We detected an alert on circuit ${circuitInfo} at ${location}."
+• Verification Checklist:
+  [ ] Is power supplied to the modem/router?
+  [ ] Any LEDs amber/off on ${circuitInfo}?
+  [ ] Local power outage in progress?
+• ETR Status: ${etr}`;
+
+      // Voicemail Call Script
+      generatedVMScript = `[VOICEMAIL LEFT SCRIPT]
+"Hello ${clientContact}, this is RapidScale Network Operations following up with ${company} regarding an event on your link at ${location} (${circuitInfo}). We have dispatched an initial alert notification to your registered email. Current ETR status is: ${etr}. Please reply to our email or call Network Support if site power is normal. Thank you."`;
+
+      renderCallScript();
+
+      const badge = document.getElementById('callScriptBadge');
+      if (badge) {
+        badge.innerText = "Script Ready";
+        badge.className = "text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded uppercase";
+      }
+
+      // Automatically Open Center Pop Up Modal with all extracted details
+      openCallScriptPopUp();
+    }
+
+    /* Call Scripting Helper UI Logic */
+    function switchCallTab(mode) {
+      activeCallTab = mode;
+      
+      // Sidebar Tab Buttons
+      const btnCustomer = document.getElementById('tabCallCustomer');
+      const btnVM = document.getElementById('tabCallVM');
+
+      // Modal Tab Buttons
+      const popTabCustomer = document.getElementById('popTabCustomer');
+      const popTabVM = document.getElementById('popTabVM');
+
+      if (mode === 'customer') {
+        if (btnCustomer) btnCustomer.className = "flex-1 py-1 rounded-md transition text-blue-700 font-bold bg-white shadow-sm text-center cursor-pointer";
+        if (btnVM) btnVM.className = "flex-1 py-1 rounded-md transition text-slate-500 hover:text-slate-800 text-center cursor-pointer font-medium";
+        
+        if (popTabCustomer) popTabCustomer.className = "px-3 py-1 rounded transition text-blue-700 bg-white shadow-sm font-bold cursor-pointer";
+        if (popTabVM) popTabVM.className = "px-3 py-1 rounded transition text-slate-600 hover:text-slate-900 cursor-pointer";
+      } else {
+        if (btnCustomer) btnCustomer.className = "flex-1 py-1 rounded-md transition text-slate-500 hover:text-slate-800 text-center cursor-pointer font-medium";
+        if (btnVM) btnVM.className = "flex-1 py-1 rounded-md transition text-blue-700 font-bold bg-white shadow-sm text-center cursor-pointer";
+        
+        if (popTabCustomer) popTabCustomer.className = "px-3 py-1 rounded transition text-slate-600 hover:text-slate-900 cursor-pointer";
+        if (popTabVM) popTabVM.className = "px-3 py-1 rounded transition text-blue-700 bg-white shadow-sm font-bold cursor-pointer";
+      }
+
+      renderCallScript();
+    }
+
+    function renderCallScript() {
+      const sidebarContent = document.getElementById('callScriptContent');
+      const modalScriptText = document.getElementById('popModalScriptText');
+
+      const activeText = activeCallTab === 'customer' ? generatedCustomerScript : generatedVMScript;
+
+      if (sidebarContent) {
+        sidebarContent.innerText = activeText || "No active email copied yet. Populated call scripts will appear here automatically.";
+      }
+      if (modalScriptText) {
+        modalScriptText.innerText = activeText || "No active email copied yet.";
+      }
+    }
+
+    function openCallScriptPopUp() {
+      document.getElementById('popModalCompany').innerText = extractedData.company;
+      document.getElementById('popModalContact').innerText = extractedData.contact;
+      document.getElementById('popModalPhone').innerText = extractedData.phone;
+      document.getElementById('popModalLocation').innerText = extractedData.location;
+      document.getElementById('popModalCircuit').innerText = extractedData.circuit;
+      document.getElementById('popModalETR').innerText = extractedData.etr;
+
+      renderCallScript();
+      document.getElementById('callScriptModal')?.classList.remove('hidden');
+    }
+
+    function closeCallScriptPopUp() {
+      document.getElementById('callScriptModal')?.classList.add('hidden');
+    }
+
+    function copyPopUpScriptText() {
+      const text = document.getElementById('popModalScriptText').innerText;
+      if (text && !text.includes("No active email copied yet")) {
+        copyToClipboardText(text, "Call script copied!");
+      } else {
+        showToast("No active script available.");
+      }
+    }
+  </script>
+</body>
+</html>
