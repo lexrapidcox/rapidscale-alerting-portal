@@ -541,8 +541,6 @@ function loadCustomTemplates() {
       reRenderAllCustomTemplates();
     });
       }
-    }
-}
 
 function reRenderAllCustomTemplates() {
   const grid = document.getElementById('templatesGrid');
