@@ -1,0 +1,30 @@
+[
+  {
+    "id": "tpl-cox-edge-down",
+    "title": "Cox Edge Down Outage Detected",
+    "category": "edge-velo",
+    "desc": "Send when an active Cox carrier network outage is confirmed.",
+    "body": "Current Status:\nWe have confirmed an ongoing Cox network outage affecting your circuit.\n\nEstimated Time of Restoration (ETR): {{ETR}}\n\nOnce the carrier restores the circuit, this ticket will automatically close. If you have any immediate questions or need further assistance, please contact us at 866-686-0328.\n\nBest regards,\nLexter Rodelas\nRapidScale Network Support Team\n866-686-0328 | support@rapidscale.net"
+  },
+  {
+    "id": "tpl-logicmonitor-original",
+    "title": "Logicmonitor - Original Template",
+    "category": "general",
+    "desc": "TO: uet.integration@cox.com",
+    "body": "ALL ITEMS IN RED MUST BE FILLED OUT WITH THE CORRECT INFORMATION\nSITE ID & ACCOUNT ID CAN BE FOUND IN THE ALERT SUBJECT\nCREATED BY = YOUR COX USER ID, IE: DMATTATA\n\n#AR-Message-Begin Do Not Delete This Line\n\nSchema: EPM_CBIncidents\nServer: uet\nLogin: RAPIDSCALES\nPassword: RAPIDSCALES\nAction: Submit\nFormat: Short\n\nCreated By !2!: LRODELAS"
+  },
+  {
+    "id": "tpl-meraki-switch-down",
+    "title": "Meraki Switch Down RS Side",
+    "category": "meraki",
+    "desc": "Meraki Switch Down RS Side",
+    "body": "Dear {{Customer_Name}},\n\nThis is Lexter with the RapidScale Alerting team. We regret to inform you that our Managed Network Support team has lost visibility to the network switch SW3 (MS125-24P) located at {{Full_Address}}.\n\nAt this time, we are actively investigating the issue to determine the root cause. If you are aware of any site work or power outages that could affect your services, please let us know by replying to this email.\n\nAs a first troubleshooting step towards restoring your switch device, we kindly ask that you perform the following steps:\n\nUnplug the power cable from the back of the switch (SW3)."
+  },
+  {
+    "id": "tpl-meraki-offline-followup",
+    "title": "Meraki Switch Offline Follow-Up",
+    "category": "meraki",
+    "desc": "Send as a follow-up email when a Meraki switch remains offline and unreachable.",
+    "body": "Dear {{Customer_Name}},\n\nThis is Lexter following up regarding your Meraki switch at {{Full_Address}}. The device is still showing as offline and unreachable on our end.\n\nPlease let us know if this is due to an intentional shutdown or scheduled site maintenance. If you require our assistance with troubleshooting, please reply directly to this email or call us at 866-686-0328.\n\nBest regards,\n\nLexter Rodelas\nRapidScale Network Support Team\n866-686-0328 | support@rapidscale.net"
+  }
+]
