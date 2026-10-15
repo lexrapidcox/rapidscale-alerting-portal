@@ -523,21 +523,35 @@ function loadCustomTemplates() {
 
   fetch('templates.json')
     .then(response => {
-      if (!response.ok) throw new Error("HTTP error " + response.status);
+      if (!response.ok) throw new Error("HTTP " + response.status);
       return response.json();
     })
     .then(data => {
       if (Array.isArray(data) && data.length > 0) {
         customTemplates = data;
-        localStorage.setItem('ops_custom_templates', JSON.stringify(customTemplates));
       } else {
         customTemplates = fallbackTemplates;
       }
+      localStorage.setItem('ops_custom_templates', JSON.stringify(customTemplates));
       reRenderAllCustomTemplates();
     })
     .catch(error => {
-      console.warn("Could not load templates.json, loading fallback array:", error);
-      customTemplates = fallbackTemplates;
+      console.warn("Could not load templates.json, loading fallbacks:", error);
+      const saved = localStorage.getItem('ops_custom_templates');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            customTemplates = parsed;
+          } else {
+            customTemplates = fallbackTemplates;
+          }
+        } catch(e) {
+          customTemplates = fallbackTemplates;
+        }
+      } else {
+        customTemplates = fallbackTemplates;
+      }
       reRenderAllCustomTemplates();
     });
 }
