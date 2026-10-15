@@ -763,7 +763,6 @@ function clearAllCarriersAndPorts() {
     if (portSelect) portSelect.value = "";
   }
 
-  // Clear single Carrier / Circuit Type input if present
   const singleCarrierInput = document.querySelector('input[placeholder*="Carrier"], #carrierInput, .carrier-input') || 
                              Array.from(document.querySelectorAll('input')).find(i => i.previousElementSibling?.textContent?.includes('Carrier'));
   if (singleCarrierInput) {
@@ -800,7 +799,7 @@ function getCombinedCarrierAndPorts() {
 }
 
 /* -------------------------------------------------------------
-   DYNAMIC TEMPLATE PREVIEW & PLACEHOLDER REPLACER (UPDATED FIX)
+   DYNAMIC TEMPLATE PREVIEW & PLACEHOLDER REPLACER
    ------------------------------------------------------------- */
 
 function updatePopoutTemplateText() {
@@ -810,8 +809,6 @@ function updatePopoutTemplateText() {
   const rawElem = document.getElementById(templateId);
   if (!rawElem) return;
 
-  // --- CARRIER RETRIEVAL FIX ---
-  // Read multi-carrier dropdowns first; fallback to single 'Carrier / Circuit Type' modal input
   let carrierValue = getSelectedCarrier(1);
   if (!carrierValue) {
     const singleCarrierInput = document.querySelector('input[placeholder*="Carrier"], #carrierInput, .carrier-input') || 
@@ -836,7 +833,6 @@ function updatePopoutTemplateText() {
   const siteLocation = document.getElementById('siteLocationInput')?.value.trim() || "[Site Location]";
   const etrValue = document.getElementById('etrMultiInput')?.value.trim() || document.querySelector('#etrInput')?.value?.trim() || "[ETR]";
 
-  // --- CLIENT NAME & DOUBLE 'INC.' FIX ---
   const companyInput = document.getElementById('companyNameInput') || 
                        document.querySelector('input[placeholder*="Company"], .company-input') || 
                        Array.from(document.querySelectorAll('input')).find(i => i.previousElementSibling?.textContent?.includes('Company Name'));
@@ -852,7 +848,6 @@ function updatePopoutTemplateText() {
 
   let text = rawElem.innerText;
 
-  // --- MULTI-SITE & CASE NUMBER LOOP FIX ---
   const siteRows = document.querySelectorAll('#siteLocationRowsList .site-loc-row, .site-loc-row');
   const siteLocList = [];
 
@@ -888,7 +883,6 @@ function updatePopoutTemplateText() {
 
   text = text.replace(/{{Site_Locations_List}}/g, siteLocList.join('\n'));
 
-  // --- CARRIER & PORT REPLACEMENTS ---
   text = text
     .replace(/{{Carrier_Type_1}}/g, c1)
     .replace(/{{Carrier_Type_2}}/g, c2)
@@ -910,7 +904,6 @@ function updatePopoutTemplateText() {
     .replace(/{{location}}/g, siteLocation)
     .replace(/{{ETR}}/g, etrValue);
 
-  // --- GREETING REPLACEMENT FIX ---
   text = text
     .replace(/Dear {{Client_Name}},/g, `Dear ${clientName},`)
     .replace(/Dear {{Account_Name}},/g, `Dear ${clientName},`)
