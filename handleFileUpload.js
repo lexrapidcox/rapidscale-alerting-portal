@@ -516,7 +516,7 @@ function loadCustomTemplates() {
       id: "tpl-meraki-offline-followup",
       title: "Meraki Switch Offline Follow-Up",
       category: "meraki",
-      desc": "Send as a follow-up email when a Meraki switch remains offline and unreachable.",
+      desc: "Send as a follow-up email when a Meraki switch remains offline and unreachable.",
       body: "Dear {{Customer_Name}},\n\nThis is Lexter following up regarding your Meraki switch..."
     }
   ];
@@ -540,7 +540,7 @@ function loadCustomTemplates() {
       customTemplates = fallbackTemplates;
       reRenderAllCustomTemplates();
     });
-      }
+}
 
 function reRenderAllCustomTemplates() {
   const grid = document.getElementById('templatesGrid');
@@ -850,126 +850,45 @@ function updatePopoutTemplateText() {
   const rawElem = document.getElementById(templateId);
   if (!rawElem) return;
 
-  let carrierValue = getSelectedCarrier(1);
-  if (!carrierValue) {
-    const singleCarrierInput = document.querySelector('input[placeholder*="Carrier"], #carrierInput, .carrier-input') || 
-                               Array.from(document.querySelectorAll('input')).find(i => i.previousElementSibling?.textContent?.includes('Carrier'));
-    if (singleCarrierInput && singleCarrierInput.value.trim() !== "") {
-      carrierValue = singleCarrierInput.value.trim();
+  let templateText = rawElem.innerText;
+  const previewBox = document.getElementById('popoutTemplatePreview');
+  if (!previewBox) return;
+
+  let clientName = "[Customer Name]";
+  let fullAddress = "[Full Address]";
+  let etrVal = document.getElementById('etrMultiInput')?.value || "[ETR]";
+
+  const contactSelect = document.getElementById('contactSelect');
+  if (contactSelect && contactSelect.value !== "") {
+    const idx = parseInt(contactSelect.value);
+    const rec = loadedDirectoryRecords[idx];
+    if (rec) {
+      clientName = rec.contactName || rec.name || "[Customer Name]";
+      fullAddress = rec.notes || rec.id || "[Full Address]";
     }
   }
-  if (!carrierValue) carrierValue = "[Carrier]";
 
-  const c1 = carrierValue;
-  const c2 = getSelectedCarrier(2) || c1;
-  const c3 = getSelectedCarrier(3) || c1;
-  const c4 = getSelectedCarrier(4) || c1;
+  templateText = templateText.replace(/{{Customer_Name}}/g, clientName);
+  templateText = templateText.replace(/{{Full_Address}}/g, fullAddress);
+  templateText = templateText.replace(/{{ETR}}/g, etrVal);
+  templateText = templateText.replace(/{{Carrier_Type_1}}/g, getSelectedCarrier(1) || "[Carrier]");
+  templateText = templateText.replace(/{{Port1}}/g, document.getElementById('portSelect1')?.value || "[Port]");
+  templateText = templateText.replace(/{{Combined_Circuits}}/g, getCombinedCarrierAndPorts());
 
-  const p1 = document.getElementById('portSelect1')?.value || "[Port 1]";
-  const p2 = document.getElementById('portSelect2')?.value || "[Port 2]";
-  const p3 = document.getElementById('portSelect3')?.value || "[Port 3]";
-  const p4 = document.getElementById('portSelect4')?.value || "[Port 4]";
-
-  const combinedCarrierPorts = getCombinedCarrierAndPorts();
-  const siteLocation = document.getElementById('siteLocationInput')?.value.trim() || "[Site Location]";
-  const etrValue = document.getElementById('etrMultiInput')?.value.trim() || document.querySelector('#etrInput')?.value?.trim() || "[ETR]";
-
-  const companyInput = document.getElementById('companyNameInput') || 
-                       document.querySelector('input[placeholder*="Company"], .company-input') || 
-                       Array.from(document.querySelectorAll('input')).find(i => i.previousElementSibling?.textContent?.includes('Company Name'));
-  
-  const selectedContactIdx = parseInt(document.getElementById('contactSelect')?.value);
-  let clientName = "[Client Name]";
-
-  if (!isNaN(selectedContactIdx) && loadedDirectoryRecords[selectedContactIdx]) {
-    clientName = loadedDirectoryRecords[selectedContactIdx].name;
-  } else if (companyInput && companyInput.value.trim() !== "") {
-    clientName = companyInput.value.trim();
-  }
-
-  let text = rawElem.innerText;
-
-  const siteRows = document.querySelectorAll('#siteLocationRowsList .site-loc-row, .site-loc-row');
-  const siteLocList = [];
-
-  if (siteRows.length > 0) {
-    siteRows.forEach((row, index) => {
-      const idx = index + 1;
-      const inputs = row.querySelectorAll('input[type="text"]');
-      const caseNum = inputs[0]?.value.trim() || `[Case ${idx}]`;
-      const locName = inputs[1]?.value.trim() || `[Location ${idx}]`;
-
-      const caseRegex = new RegExp(`{{Case_${idx}}}`, 'g');
-      const locRegex = new RegExp(`{{Site_Location_${idx}}}`, 'g');
-
-      text = text.replace(caseRegex, caseNum);
-      text = text.replace(locRegex, locName);
-
-      if (idx === 1) {
-        text = text.replace(/{{Case_#}}/g, caseNum);
-        text = text.replace(/{{Site_Location}}/g, locName);
-      }
-
-      siteLocList.push(`- Case #: ${caseNum}, Location ${idx}: ${locName}`);
-    });
-  } else {
-    text = text
-      .replace(/{{Case_1}}/g, "[Case 1]")
-      .replace(/{{Site_Location_1}}/g, "[Location 1]")
-      .replace(/{{Case_2}}/g, "[Case 2]")
-      .replace(/{{Site_Location_2}}/g, "[Location 2]")
-      .replace(/{{Case_3}}/g, "[Case 3]")
-      .replace(/{{Site_Location_3}}/g, "[Location 3]");
-  }
-
-  text = text.replace(/{{Site_Locations_List}}/g, siteLocList.join('\n'));
-
-  text = text
-    .replace(/{{Carrier_Type_1}}/g, c1)
-    .replace(/{{Carrier_Type_2}}/g, c2)
-    .replace(/{{Carrier_Type_3}}/g, c3)
-    .replace(/{{Carrier_Type_4}}/g, c4)
-    .replace(/{{Carrier_Type}}/g, c1)
-    .replace(/{{Circuit_Type}}/g, c1)
-    .replace(/{{Connection_1}}/g, `${c1} (Port ${p1})`)
-    .replace(/{{Connection_2}}/g, `${c2} (Port ${p2})`)
-    .replace(/{{Connection_3}}/g, `${c3} (Port ${p3})`)
-    .replace(/{{Connection_4}}/g, `${c4} (Port ${p4})`)
-    .replace(/{{Carrier_Port_Summary}}/g, combinedCarrierPorts)
-    .replace(/{{Port1}}/g, p1)
-    .replace(/{{Port2}}/g, p2)
-    .replace(/{{Port3}}/g, p3)
-    .replace(/{{Port4}}/g, p4)
-    .replace(/{{Port}}/g, p1)
-    .replace(/{{Full_Address}}/g, siteLocation)
-    .replace(/{{location}}/g, siteLocation)
-    .replace(/{{ETR}}/g, etrValue);
-
-  text = text
-    .replace(/Dear {{Client_Name}},/g, `Dear ${clientName},`)
-    .replace(/Dear {{Account_Name}},/g, `Dear ${clientName},`)
-    .replace(/{{Account_Name}}/g, clientName)
-    .replace(/{{Client_Name}}/g, clientName);
-
-  if (!isNaN(selectedContactIdx) && loadedDirectoryRecords[selectedContactIdx]) {
-    const selectedClient = loadedDirectoryRecords[selectedContactIdx];
-    text = text
-      .replace(/{{Account_ID}}/g, selectedClient.id)
-      .replace(/{{Customer_Phone}}/g, selectedClient.contactPhone || '-')
-      .replace(/{{Customer_Email}}/g, selectedClient.contactEmail || '-');
-  }
-
-  document.getElementById('popoutTemplatePreview').innerText = text;
+  previewBox.innerText = templateText;
 }
 
 function copyPopoutTemplate() {
-  const text = document.getElementById('popoutTemplatePreview').innerText;
-  if (!text) {
-    alert("Please select a template first.");
+  const previewBox = document.getElementById('popoutTemplatePreview');
+  if (!previewBox) return;
+  
+  const text = previewBox.innerText;
+  if (!text.trim()) {
+    alert("No template text to copy.");
     return;
   }
+
   navigator.clipboard.writeText(text).then(() => {
-    alert("Populated template copied to clipboard!");
-    closeTemplateModal();
+    alert("Pop-out template copied to clipboard!");
   });
 }
